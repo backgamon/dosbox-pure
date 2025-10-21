@@ -306,18 +306,10 @@ static void RENDER_Reset( void ) {
 	Bitu gfx_flags, xscale, yscale;
 	ScalerSimpleBlock_t		*simpleBlock = &ScaleNormal1x;
 	ScalerComplexBlock_t	*complexBlock = 0;
-	if (render.aspect) {
-		if (render.src.ratio>1.0) {
-			gfx_scalew = 1;
-			gfx_scaleh = render.src.ratio;
-		} else {
-			gfx_scalew = (1/render.src.ratio);
-			gfx_scaleh = 1;
-		}
-	} else {
-		gfx_scalew = 1;
-		gfx_scaleh = 1;
-	}
+	// Force plein écran sans bandes noires
+gfx_scalew = 1;
+gfx_scaleh = 1;
+render.aspect = false;
 
 #ifdef C_DBP_ENABLE_SCALERS
 	/* Don't do software scaler sizes larger than 4k */
