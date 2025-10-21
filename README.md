@@ -294,6 +294,7 @@ Change into the project directory then run `make -j4` to build it.
 The makefile explicitly is set to use g++-9 because there are codegen bugs in GCC 10.2 that affect
 any version of DOSBox on certain platforms.  
 You can edit the simple Makefile to set a different compiler or add hardware specific compiler flags.
+TEST
 
 ## License
 DOSBox Pure, as well as original DOSBox, is available under the [GNU General Public License, version 2 or later](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html).
