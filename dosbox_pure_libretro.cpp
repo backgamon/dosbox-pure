@@ -319,7 +319,7 @@ bool MSCDEX_HasDrive(char driveLetter);
 int MSCDEX_AddDrive(char driveLetter, const char* physicalPath, Bit8u& subUnit);
 int MSCDEX_RemoveDrive(char driveLetter);
 void IDE_RefreshCDROMs();
-void IDE_SetupControllers(char force_cd_drive_letter = 0);
+void IDE_SetupControllers(bool alwaysHaveCDROM);
 void NET_SetupEthernet();
 bool MIDI_TSF_SwitchSF(const char*);
 const char* DBP_MIDI_StartupError(Section* midisec, const char*& arg);
@@ -985,7 +985,7 @@ static DOS_Drive* DBP_Mount(unsigned image_index = 0, bool unmount_existing = tr
 		DBP_SetDriveLabelFromContentPath(drive, path, letter, path_file, ext);
 		if (boot && letter == 'C') return drive;
 	}
-	else if (!strcasecmp(ext, "IMG") || !strcasecmp(ext, "IMA") || !strcasecmp(ext, "VHD") || !strcasecmp(ext, "JRC") || !strcasecmp(ext, "TC"))
+	else if (!strcasecmp(ext, "IMG") || !strcasecmp(ext, "IMA") || !strcasecmp(ext, "VHD") || !strcasecmp(ext, "JRC"))
 	{
 		fatDrive* fat = new fatDrive(path, 512, 0, 0, 0, 0);
 		if (!fat->loadedDisk || (!fat->created_successfully && letter >= 'A'+MAX_DISK_IMAGES))
@@ -1026,7 +1026,7 @@ static DOS_Drive* DBP_Mount(unsigned image_index = 0, bool unmount_existing = tr
 				return fat;
 			}
 		}
-		if (!letter) letter = (disk->hardDrive ? 'D' : 'A');
+		if (!letter) letter = (disk->hardDrive ? (drive ? 'D' : 'E') : 'A');
 		media_byte = (disk->hardDrive ? 0xF8 : (disk->active ? disk->GetBiosType() : 0));
 	}
 	else if (!strcasecmp(ext, "ISO") || !strcasecmp(ext, "CHD") || !strcasecmp(ext, "CUE") || !strcasecmp(ext, "INS"))
@@ -1933,6 +1933,11 @@ void DBP_ShowSlowLoading()
 	GFX_AdvanceFrame(false, true); // can't auto adjust CPU_CycleMax because we're not inside GFX_Events
 }
 
+bool DBP_UseDirectMouse()
+{
+	return (dbp_mouse_input == 'd');
+}
+
 static void DBP_PureLabelProgram(Program** make)
 {
 	struct LabelProgram : Program
@@ -2071,7 +2076,7 @@ void retro_get_system_info(struct retro_system_info *info) // #1
 	info->library_version  = DOSBOX_PURE_VERSION_STR;
 	info->need_fullpath    = true;
 	info->block_extract    = true;
-	info->valid_extensions = "zip|dosz|exe|com|bat|iso|chd|cue|ins|img|ima|vhd|jrc|tc|m3u|m3u8|conf|/";
+	info->valid_extensions = "zip|dosz|exe|com|bat|iso|chd|cue|ins|img|ima|vhd|jrc|m3u|m3u8|conf|/";
 }
 
 void retro_set_environment(retro_environment_t cb) //#2
@@ -2506,7 +2511,7 @@ static void init_dosbox_parse_drives()
 		const char* fext = (data == ('C'-'A') ? strrchr(fname, '.') : NULL);
 		if (fext++)
 		{
-			bool isFS = (!strcmp(fext, "ISO") || !strcmp(fext, "CHD") || !strcmp(fext, "CUE") || !strcmp(fext, "INS") || !strcmp(fext, "IMG") || !strcmp(fext, "IMA") || !strcmp(fext, "VHD") || !strcmp(fext, "JRC") || !strcmp(fext, "TC"));
+			bool isFS = (!strcmp(fext, "ISO") || !strcmp(fext, "CHD") || !strcmp(fext, "CUE") || !strcmp(fext, "INS") || !strcmp(fext, "IMG") || !strcmp(fext, "IMA") || !strcmp(fext, "VHD") || !strcmp(fext, "JRC"));
 			if (isFS && !strncmp(fext, "IM", 2))
 			{
 				DOS_File *df;
@@ -2646,8 +2651,8 @@ static void init_dosbox(bool forcemenu = false, bool reinit = false, const std::
 		#endif
 	}
 	const int path_extlen = (path ? (int)((path_fragment ? path_fragment : path + dbp_content_path.length()) - path_ext) : 0);
-	const bool newcontent = !dbp_wasloaded, force_puremenu = (dbp_biosreboot || forcemenu);
-	if (newcontent) dbp_biosreboot = false; // ignore this when switching content
+	const bool newcontent = !dbp_wasloaded, force_puremenu = forcemenu || (dbp_biosreboot && dbp_wasloaded);
+	if (newcontent) dbp_biosreboot = dbp_reboot_set64mem = false; // ignore this when switching content
 	if (newcontent && !reinit) dbp_auto_mapping = NULL; // re-acquire when switching content
 
 	// Loading a .conf file behaves like regular DOSBox (no union drive mounting, save file, start menu, etc.)
@@ -3475,6 +3480,9 @@ void retro_run(void)
 				DBP_ForceReset();
 			else if (dbp_state == DBPSTATE_EXITED) // expected shutdown
 			{
+				#ifdef DBP_STANDALONE
+				environ_cb(RETRO_ENVIRONMENT_SHUTDOWN, 0);
+				#else
 				// On statically linked platforms shutdown would exit the frontend, so don't do that. Just tint the screen red and sleep
 				#ifndef STATIC_LINKING
 				if (dbp_menu_time >= 0 && dbp_menu_time < 99) // only auto shut down for users that want auto shut down in general
@@ -3487,6 +3495,7 @@ void retro_run(void)
 					for (Bit8u *p = (Bit8u*)buf.video, *pEnd = p + buf.width * buf.height * 4; p < pEnd; p += 56) p[2] = 255;
 					retro_sleep(10);
 				}
+				#endif
 			}
 			else if (dbp_state == DBPSTATE_SHUTDOWN)
 			{

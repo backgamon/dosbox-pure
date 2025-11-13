@@ -53,6 +53,7 @@ namespace DBP_Option
 		_interface_slowrate,
 		_interface_systemhotkeys,
 		_interface_middlemouse,
+		_interface_lockmouse,
 		#endif
 		// General
 		forcefps,
@@ -212,6 +213,17 @@ static retro_core_option_v2_definition option_defs[DBP_Option::_OPTIONS_TOTAL] =
 		"interface_middlemouse",
 		"Middle Mouse Button Open Menu", NULL,
 		"If enabled the middle mouse button will open/close the On-Screen Menu.", NULL,
+		DBP_OptionCat::General,
+		{
+			{ "false", "Off" },
+			{ "true", "On" },
+		},
+		"false"
+	},
+	{
+		"interface_lockmouse",
+		"Mouse Lock Default Status", NULL,
+		"Will have the mouse locked at program start if enabled.", NULL,
 		DBP_OptionCat::General,
 		{
 			{ "false", "Off" },
@@ -812,7 +824,7 @@ static retro_core_option_v2_definition option_defs[DBP_Option::_OPTIONS_TOTAL] =
 	{
 		"dosbox_pure_aspect_correction",
 		"Aspect Ratio Correction", NULL,
-		"Adjust the core's aspect ratio to approximate what a CRT monitor would display (works best on high resolution displays and without integer scaling).", NULL,
+		"Adjust the aspect ratio to approximate what a CRT monitor would display (works best on high resolution displays and without integer scaling).", NULL,
 		DBP_OptionCat::Video,
 		{
 			{ "false", "Off (default)" },
@@ -820,6 +832,9 @@ static retro_core_option_v2_definition option_defs[DBP_Option::_OPTIONS_TOTAL] =
 			{ "doublescan", "On (double-scan when applicable)" },
 			{ "padded", "Padded to 4:3 (single-scan)" },
 			{ "padded-doublescan", "Padded to 4:3 (double-scan when applicable)" },
+			#ifdef DBP_STANDALONE
+			{ "fill", "Stretch the display to fill the window, ignoring any content aspect ratio" },
+			#endif
 		},
 		"false"
 	},
